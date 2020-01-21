@@ -6,7 +6,7 @@
   "scripts": {
     "check-coverage": "istanbul check-coverage --statements 100",
     "lint": "eslint *.js example/*.js test/*.js",
-    "test": "istanbul cover _mocha -- --check-leaks --timeout 3000"
+    "test": "istanbul cover node_modules/mocha/bin/_mocha -- --check-leaks --timeout 3000"
   },
   "dependencies": {
     "aws-sdk": "~2.290.0"
