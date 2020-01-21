@@ -32,6 +32,7 @@ var defaultConfig = {
   subjectPrefix: "",
   emailBucket: "s3-bucket-name",
   emailKeyPrefix: "emailsPrefix/",
+  dynamicEmailKeyPrefix: false,
   forwardMapping: {
     "info@example.com": [
       "example.john@example.com",
@@ -45,6 +46,11 @@ var defaultConfig = {
     ],
     "info": [
       "info@example.com"
+    ]
+  },
+  forwardDomainMapping: {
+    "@example.com": [
+      "@example.org"
     ]
   }
 };
@@ -75,6 +81,30 @@ exports.parseEvent = function(data) {
 };
 
 /**
+ * Updates the emailKeyPrefix if the dynamicEmailKeyPrefix is true
+ *
+ * @param {object} data - Data bundle with context, email, etc.
+ *
+ * @return {object} - Promise resolved with data.
+ */
+exports.getEmailKeyPrefix = function(data) {
+  if (data.config.dynamicEmailKeyPrefix) {
+    if (!data.recipients[1]) {
+      var newEmailAddress = data.recipients[0];
+      var pos = newEmailAddress.lastIndexOf("@");
+      var emailKeyPrefix = newEmailAddress.slice(0, pos) + '/';
+      data.config.emailKeyPrefix = emailKeyPrefix.toLowerCase();
+    } else {
+      data.log({level: "error", message: "A wildcard S3 key must not be used with more than one recipient"});
+      return Promise.reject(
+        new Error("Error: A wildcard S3 key must not be used with more than one recipient.")
+      );
+    }
+  }
+  return Promise.resolve(data);
+}
+
+/**
  * Transforms the original recipients to the desired forwarded destinations.
  *
  * @param {object} data - Data bundle with context, email, etc.
@@ -86,30 +116,38 @@ exports.transformRecipients = function(data) {
   data.originalRecipients = data.recipients;
   data.recipients.forEach(function(origEmail) {
     var origEmailKey = origEmail.toLowerCase();
+    var origEmailDomain;
+    var origEmailUser;
+    var pos = origEmailKey.lastIndexOf("@");
+    if (pos === -1) {
+      origEmailUser = origEmailKey;
+    } else {
+      origEmailDomain = origEmailKey.slice(pos);
+      origEmailUser = origEmailKey.slice(0, pos);
+    }
     if (data.config.forwardMapping.hasOwnProperty(origEmailKey)) {
       newRecipients = newRecipients.concat(
         data.config.forwardMapping[origEmailKey]);
       data.originalRecipient = origEmail;
     } else {
-      var origEmailDomain;
-      var origEmailUser;
-      var pos = origEmailKey.lastIndexOf("@");
-      if (pos === -1) {
-        origEmailUser = origEmailKey;
-      } else {
-        origEmailDomain = origEmailKey.slice(pos);
-        origEmailUser = origEmailKey.slice(0, pos);
-      }
-      if (origEmailDomain &&
+       if (origEmailDomain &&
           data.config.forwardMapping.hasOwnProperty(origEmailDomain)) {
         newRecipients = newRecipients.concat(
           data.config.forwardMapping[origEmailDomain]);
         data.originalRecipient = origEmail;
       } else if (origEmailUser &&
-        data.config.forwardMapping.hasOwnProperty(origEmailUser)) {
-        newRecipients = newRecipients.concat(
+          data.config.forwardMapping.hasOwnProperty(origEmailUser)) {
+            newRecipients = newRecipients.concat(
           data.config.forwardMapping[origEmailUser]);
         data.originalRecipient = origEmail;
+      } else {
+          if (origEmailDomain &&
+            data.config.forwardDomainMapping.hasOwnProperty(origEmailDomain)) {
+          var forwardEmail = origEmailUser.concat(
+            data.config.forwardDomainMapping[origEmailDomain]);
+          newRecipients = newRecipients.concat(forwardEmail);
+          data.originalRecipient = origEmail;
+          }
       }
     }
   });
@@ -230,10 +268,10 @@ exports.processMessage = function(data) {
   }
 
   // Remove the Return-Path header.
-  header = header.replace(/^Return-Path: (.*)\r?\n/mg, '');
+  header = header.replace(/^Return-Path: (.*(?:\r?\n\s+.*)*)\r?\n/mg, '');
 
   // Remove Sender header.
-  header = header.replace(/^Sender: (.*)\r?\n/mg, '');
+  header = header.replace(/^Sender: (.*(?:\r?\n\s+.*)*)\r?\n/mg, '');
 
   // Remove Message-ID header.
   header = header.replace(/^Message-ID: (.*)\r?\n/mig, '');
@@ -294,6 +332,7 @@ exports.handler = function(event, context, callback, overrides) {
   var steps = overrides && overrides.steps ? overrides.steps :
   [
     exports.parseEvent,
+    exports.getEmailKeyPrefix,
     exports.transformRecipients,
     exports.fetchMessage,
     exports.processMessage,

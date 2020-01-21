@@ -42,6 +42,10 @@ original destination.
 more information, see:
 http://docs.aws.amazon.com/ses/latest/DeveloperGuide/verify-domains.html
 
+- SES only allows receiving emails up to 30 MB in size (including attachments
+  after encoding). See:
+  https://docs.aws.amazon.com/ses/latest/DeveloperGuide/limits.html
+
 - SES only allows sending emails up to 10 MB in size (including attachments
 after encoding). See:
 https://docs.aws.amazon.com/ses/latest/DeveloperGuide/limits.html
@@ -56,10 +60,17 @@ http://docs.aws.amazon.com/ses/latest/DeveloperGuide/limits.html
 the S3 bucket and object prefix for locating emails stored by SES. Also provide
 the email forwarding mapping from original destinations to new destination.
 
+ - **forwardMapping** can be used for address specific forwards
+
+ - **forwardDomainMapping** will only be used if no other forwardMapping is matched, and allows any user to be forwarded to the same user at the new domain.
+    For example. An email to jane@example.com would be forwarded to jane@example.org
+
+ - **dynamicEmailKeyPrefix** can be configured as true which will use configure emailKeyPrefix to be username of the original recipient. This allows for individual S3 keys to be used per user instead of them all sharing a key. When setting to true there must be only one recipient per SES receive rule.
+
 2. In AWS Lambda, add a new function and skip selecting a blueprint.
 
  - Name the function "SesForwarder" and optionally give it a description. Ensure
- Runtime is set to Node.js v8.10.
+ Runtime is set to Node.js v10.x.
 
  - For the Lambda function code, either copy and paste the contents of
  `index.js` into the inline code editor or zip the contents of the repository
