@@ -47,6 +47,11 @@ var defaultConfig = {
     "info": [
       "info@example.com"
     ]
+  },
+  forwardDomainMapping: {
+    "@example.com": [
+      "@example.org"
+    ]
   }
 };
 
@@ -111,21 +116,21 @@ exports.transformRecipients = function(data) {
   data.originalRecipients = data.recipients;
   data.recipients.forEach(function(origEmail) {
     var origEmailKey = origEmail.toLowerCase();
+    var origEmailDomain;
+    var origEmailUser;
+    var pos = origEmailKey.lastIndexOf("@");
+    if (pos === -1) {
+      origEmailUser = origEmailKey;
+    } else {
+      origEmailDomain = origEmailKey.slice(pos);
+      origEmailUser = origEmailKey.slice(0, pos);
+    }
     if (data.config.forwardMapping.hasOwnProperty(origEmailKey)) {
       newRecipients = newRecipients.concat(
         data.config.forwardMapping[origEmailKey]);
       data.originalRecipient = origEmail;
     } else {
-      var origEmailDomain;
-      var origEmailUser;
-      var pos = origEmailKey.lastIndexOf("@");
-      if (pos === -1) {
-        origEmailUser = origEmailKey;
-      } else {
-        origEmailDomain = origEmailKey.slice(pos);
-        origEmailUser = origEmailKey.slice(0, pos);
-      }
-      if (origEmailDomain &&
+       if (origEmailDomain &&
           data.config.forwardMapping.hasOwnProperty(origEmailDomain)) {
         newRecipients = newRecipients.concat(
           data.config.forwardMapping[origEmailDomain]);
@@ -135,6 +140,14 @@ exports.transformRecipients = function(data) {
             newRecipients = newRecipients.concat(
           data.config.forwardMapping[origEmailUser]);
         data.originalRecipient = origEmail;
+      } else {
+          if (origEmailDomain &&
+            data.config.forwardDomainMapping.hasOwnProperty(origEmailDomain)) {
+          var forwardEmail = origEmailUser.concat(
+            data.config.forwardDomainMapping[origEmailDomain]);
+          newRecipients = newRecipients.concat(forwardEmail);
+          data.originalRecipient = origEmail;
+          }
       }
     }
   });
