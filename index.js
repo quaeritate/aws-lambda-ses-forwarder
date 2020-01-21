@@ -18,6 +18,12 @@ console.log("AWS Lambda SES Forwarder // @arithmetric // Version 4.2.0");
 // - emailKeyPrefix: S3 key name prefix where SES stores email. Include the
 //   trailing slash.
 //
+// - allowPlusSign: Enables support for plus sign suffixes on email addresses.
+//   If set to `true`, the username/mailbox part of an email address is parsed
+//   to remove anything after a plus sign. For example, an email sent to
+//   `example+test@example.com` would be treated as if it was sent to
+//   `example@example.com`.
+//
 // - forwardMapping: Object where the key is the lowercase email address from
 //   which to forward and the value is an array of email addresses to which to
 //   send the message.
@@ -32,6 +38,7 @@ var defaultConfig = {
   subjectPrefix: "",
   emailBucket: "s3-bucket-name",
   emailKeyPrefix: "emailsPrefix/",
+  allowPlusSign: true,
   dynamicEmailKeyPrefix: false,
   forwardMapping: {
     "info@example.com": [
@@ -116,6 +123,9 @@ exports.transformRecipients = function(data) {
   data.originalRecipients = data.recipients;
   data.recipients.forEach(function(origEmail) {
     var origEmailKey = origEmail.toLowerCase();
+    if (data.config.allowPlusSign) {
+      origEmailKey = origEmailKey.replace(/\+.*?@/, '@');
+    }
     var origEmailDomain;
     var origEmailUser;
     var pos = origEmailKey.lastIndexOf("@");
