@@ -32,6 +32,7 @@ var defaultConfig = {
   subjectPrefix: "",
   emailBucket: "s3-bucket-name",
   emailKeyPrefix: "emailsPrefix/",
+  dynamicEmailKeyPrefix: false,
   forwardMapping: {
     "info@example.com": [
       "example.john@example.com",
@@ -75,6 +76,30 @@ exports.parseEvent = function(data) {
 };
 
 /**
+ * Updates the emailKeyPrefix if the dynamicEmailKeyPrefix is true
+ *
+ * @param {object} data - Data bundle with context, email, etc.
+ *
+ * @return {object} - Promise resolved with data.
+ */
+exports.getEmailKeyPrefix = function(data) {
+  if (data.config.dynamicEmailKeyPrefix) {
+    if (!data.recipients[1]) {
+      var newEmailAddress = data.recipients[0];
+      var pos = newEmailAddress.lastIndexOf("@");
+      var emailKeyPrefix = newEmailAddress.slice(0, pos) + '/';
+      data.config.emailKeyPrefix = emailKeyPrefix.toLowerCase();
+    } else {
+      data.log({level: "error", message: "A wildcard S3 key must not be used with more than one recipient"});
+      return Promise.reject(
+        new Error("Error: A wildcard S3 key must not be used with more than one recipient.")
+      );
+    }
+  }
+  return Promise.resolve(data);
+}
+
+/**
  * Transforms the original recipients to the desired forwarded destinations.
  *
  * @param {object} data - Data bundle with context, email, etc.
@@ -106,8 +131,8 @@ exports.transformRecipients = function(data) {
           data.config.forwardMapping[origEmailDomain]);
         data.originalRecipient = origEmail;
       } else if (origEmailUser &&
-        data.config.forwardMapping.hasOwnProperty(origEmailUser)) {
-        newRecipients = newRecipients.concat(
+          data.config.forwardMapping.hasOwnProperty(origEmailUser)) {
+            newRecipients = newRecipients.concat(
           data.config.forwardMapping[origEmailUser]);
         data.originalRecipient = origEmail;
       }
@@ -294,6 +319,7 @@ exports.handler = function(event, context, callback, overrides) {
   var steps = overrides && overrides.steps ? overrides.steps :
   [
     exports.parseEvent,
+    exports.getEmailKeyPrefix,
     exports.transformRecipients,
     exports.fetchMessage,
     exports.processMessage,
