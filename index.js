@@ -230,10 +230,10 @@ exports.processMessage = function(data) {
   }
 
   // Remove the Return-Path header.
-  header = header.replace(/^Return-Path: (.*)\r?\n/mg, '');
+  header = header.replace(/^Return-Path: (.*(?:\r?\n\s+.*)*)\r?\n/mg, '');
 
   // Remove Sender header.
-  header = header.replace(/^Sender: (.*)\r?\n/mg, '');
+  header = header.replace(/^Sender: (.*(?:\r?\n\s+.*)*)\r?\n/mg, '');
 
   // Remove Message-ID header.
   header = header.replace(/^Message-ID: (.*)\r?\n/mig, '');
