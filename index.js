@@ -135,38 +135,54 @@ exports.transformRecipients = function(data) {
   data.originalRecipients = data.recipients;
   data.recipients.forEach(function(origEmail) {
     var origEmailKey = origEmail.toLowerCase();
-    var origEmailDomain;
-    var origEmailUser;
-    var pos = origEmailKey.lastIndexOf("@");
-    if (pos === -1) {
-      origEmailUser = origEmailKey;
-    } else {
-      origEmailDomain = origEmailKey.slice(pos);
-      origEmailUser = origEmailKey.slice(0, pos);
+    if (data.config.allowPlusSign) {
+      origEmailKey = origEmailKey.replace(/\+.*?@/, '@');
     }
+    // recipient email exists on the forwardMapping
+    // e.g. info@example.com => "example.john@example.com", "example.jen@example.com"
     if (data.config.forwardMapping.hasOwnProperty(origEmailKey)) {
       newRecipients = newRecipients.concat(
         data.config.forwardMapping[origEmailKey]);
       data.originalRecipient = origEmail;
     } else {
-       if (origEmailDomain &&
-          data.config.forwardMapping.hasOwnProperty(origEmailDomain)) {
+      // Extract details of recipient email address e.g. info@example.com
+      var origEmailDomain;
+      var origEmailUser;
+      var pos = origEmailKey.lastIndexOf("@");
+      if (pos === -1) {
+        origEmailUser = origEmailKey;
+      } else {
+        origEmailDomain = origEmailKey.slice(pos); // e.g. @example.com
+        origEmailUser = origEmailKey.slice(0, pos); // e.g. info
+      }
+      // recipient domain exists on the forwardMapping
+      // e.g. test@example.com => "example.john@example.com"
+      if (origEmailDomain &&
+         data.config.forwardMapping.hasOwnProperty(origEmailDomain)) {
         newRecipients = newRecipients.concat(
           data.config.forwardMapping[origEmailDomain]);
-        data.originalRecipient = origEmail;
+        data.originalRecipient = origEmail; // e.g. example.john@example.com
+        // recipient user exists on the forwardMapping
+        // e.g. info => "info@example.com"
       } else if (origEmailUser &&
-          data.config.forwardMapping.hasOwnProperty(origEmailUser)) {
-            newRecipients = newRecipients.concat(
+       data.config.forwardMapping.hasOwnProperty(origEmailUser)) {
+        newRecipients = newRecipients.concat(
           data.config.forwardMapping[origEmailUser]);
         data.originalRecipient = origEmail;
-      } else {
-          if (origEmailDomain &&
-            data.config.forwardDomainMapping.hasOwnProperty(origEmailDomain)) {
-          var forwardEmail = origEmailUser.concat(
-            data.config.forwardDomainMapping[origEmailDomain]);
-          newRecipients = newRecipients.concat(forwardEmail);
-          data.originalRecipient = origEmail;
-          }
+      // recipient domain exists on forwardDomainMapping
+      // e.g. @example.com => "@example.org"
+      } else if (origEmailDomain &&
+          data.config.forwardDomainMapping.hasOwnProperty(origEmailDomain)) {
+        var forwardEmail = origEmailUser.concat(
+          data.config.forwardDomainMapping[origEmailDomain]);
+        newRecipients = newRecipients.concat(forwardEmail); // e.g. test@exmaple.org
+        data.originalRecipient = origEmail; // e.g. test@example.com
+        // No match found check for catch all @ addresses
+        // e.g. @ => catch-all@exmaple.com
+      } else if (data.config.forwardMapping.hasOwnProperty("@")) {
+        newRecipients = newRecipients.concat(
+          data.config.forwardMapping["@"]);
+        data.originalRecipient = origEmail;
       }
     }
   });
