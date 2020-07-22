@@ -103,7 +103,7 @@ exports.parseEvent = function(data) {
  */
 exports.getEmailKeyPrefix = function(data) {
   if (data.config.dynamicEmailKeyPrefix) {
-    if (!data.recipients[1]) {
+    if (data.recipients.length === 1) {
       var newEmailAddress = data.recipients[0];
       var pos = newEmailAddress.lastIndexOf("@");
       var emailKeyPrefix = newEmailAddress.slice(0, pos) + '/';
@@ -111,15 +111,17 @@ exports.getEmailKeyPrefix = function(data) {
     } else {
       data.log({
         level: "error",
-        message: "A wildcard S3 key must not be used with more than one recipient"
+        message: "A wildcard S3 key must not be used with more " +
+          "than one recipient"
       });
       return Promise.reject(
-        new Error("Error: A wildcard S3 key must not be used with more than one recipient.")
+        new Error("Error: A wildcard S3 key must not be used with " +
+          "more than one recipient.")
       );
     }
   }
   return Promise.resolve(data);
-}
+};
 
 /**
  * Transforms the original recipients to the desired forwarded destinations.
@@ -386,14 +388,14 @@ exports.sendMessage = function(data) {
  */
 exports.handler = function(event, context, callback, overrides) {
   var steps = overrides && overrides.steps ? overrides.steps :
-  [
-    exports.parseEvent,
-    exports.getEmailKeyPrefix,
-    exports.transformRecipients,
-    exports.fetchMessage,
-    exports.processMessage,
-    exports.sendMessage
-  ];
+    [
+      exports.parseEvent,
+      exports.getEmailKeyPrefix,
+      exports.transformRecipients,
+      exports.fetchMessage,
+      exports.processMessage,
+      exports.sendMessage
+    ];
   var data = {
     event: event,
     callback: callback,

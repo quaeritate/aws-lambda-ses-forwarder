@@ -59,34 +59,34 @@ describe('index.js', function() {
           });
       });
 
-      it('should transform multiple recipients',
-        function(done) {
-          var data = {
-            recipients: ["info@example.com", "admin@example.com"],
-            config: {
-              forwardMapping: {
-                "info@example.com": [
-                  "jim@example.com"
-                ],
-                "admin@example.com": [
-                  "jane@example.com"
-                ]
-              }
-            },
-            context: {},
-            log: console.log
-          };
-          index.transformRecipients(data)
-            .then(function(data) {
-              assert.equal(data.recipients[0],
-                "jim@example.com",
-                "parseEvent made 1/2 substitutions");
-              assert.equal(data.recipients[1],
-                "jane@example.com",
-                "parseEvent made 2/2 substitutions");
-              done();
-            });
-        });
+    it('should transform multiple recipients',
+      function(done) {
+        var data = {
+          recipients: ["info@example.com", "admin@example.com"],
+          config: {
+            forwardMapping: {
+              "info@example.com": [
+                "jim@example.com"
+              ],
+              "admin@example.com": [
+                "jane@example.com"
+              ]
+            }
+          },
+          context: {},
+          log: console.log
+        };
+        index.transformRecipients(data)
+          .then(function(data) {
+            assert.equal(data.recipients[0],
+              "jim@example.com",
+              "parseEvent made 1/2 substitutions");
+            assert.equal(data.recipients[1],
+              "jane@example.com",
+              "parseEvent made 2/2 substitutions");
+            done();
+          });
+      });
 
     it('should transform recipients according to a domain wildcard mapping',
       function(done) {
@@ -114,31 +114,31 @@ describe('index.js', function() {
           });
       });
 
-      it('should transform recipients according to a generic domain mapping',
-        function(done) {
-          var data = {
-            recipients: ["jim@example.com", "jane@example.com"],
-            config: {
-              forwardMapping: {},
-              forwardDomainMapping: {
-                "@example.com": [
-                  "@example.org"
-                ]
-              },
-              log: console.log
-            }
-          };
-          index.transformRecipients(data)
-            .then(function(data) {
-              assert.equal(data.recipients[0],
-                "jim@example.org",
-                "parseEvent made 1/2 substitutions");
-              assert.equal(data.recipients[1],
-                "jane@example.org",
-                "parseEvent made 2/2 substitutions");
-              done();
-            });
-        });
+    it('should transform recipients according to a generic domain mapping',
+      function(done) {
+        var data = {
+          recipients: ["jim@example.com", "jane@example.com"],
+          config: {
+            forwardMapping: {},
+            forwardDomainMapping: {
+              "@example.com": [
+                "@example.org"
+              ]
+            },
+            log: console.log
+          }
+        };
+        index.transformRecipients(data)
+          .then(function(data) {
+            assert.equal(data.recipients[0],
+              "jim@example.org",
+              "parseEvent made 1/2 substitutions");
+            assert.equal(data.recipients[1],
+              "jane@example.org",
+              "parseEvent made 2/2 substitutions");
+            done();
+          });
+      });
 
     it('should transform recipients according to a user wildcard mapping',
       function(done) {
